@@ -1,4 +1,4 @@
-package rxhash
+package redisqlite
 
 import "github.com/wenerme/go-rm/rm"
 

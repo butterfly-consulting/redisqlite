@@ -1,8 +1,8 @@
 package main
 
 import (
+	"github.com/butterfly-consulting/redisqlite"
 	"github.com/wenerme/go-rm/rm"
-	"github.com/redismodule/rxhash"
 )
 
 func main() {
@@ -11,5 +11,5 @@ func main() {
 }
 
 func init() {
-	rm.Mod = rxhash.CreateModule()
+	rm.Mod = redisqlite.CreateModule()
 }

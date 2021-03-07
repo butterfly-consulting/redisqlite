@@ -1,164 +1,125 @@
-package rxhash
+// +build cgo
 
+package redisqlite
+
+/*
+#include <stdio.h>
+#include <stdlib.h>
+*/
+import "C"
 import (
+	"database/sql"
+	"encoding/json"
+
 	"github.com/wenerme/go-rm/rm"
+
+	// sqlite database driver
+	_ "github.com/mattn/go-sqlite3"
 )
 
+var db *sql.DB
+
 func init() {
-	commands = append(commands,
-		CreateCommand_HGETSET(),
-		CreateCommand_HGETDEL(),
-		CreateCommand_HSETM(),
-		CreateCommand_HDELM(),
-		CreateCommand_HSETEX(),
-	)
-}
-
-func CreateCommand_HGETSET() rm.Command {
-	return rm.Command{
-		Usage: "HGETSET key field value",
-		Desc: `Sets the 'field' in Hash 'key' to 'value' and returns the previous value, if any.
-Reply: String, the previous value or NULL if 'field' didn't exist. `,
-		Name:   "hgetset",
-		Flags:  "write fast deny-oom",
-		FirstKey:1, LastKey:1, KeyStep:1,
-		Action: func(cmd rm.CmdContext) int {
-			ctx, args := cmd.Ctx, cmd.Args
-			if len(cmd.Args) != 4 {
-				return ctx.WrongArity()
-			}
-			ctx.AutoMemory()
-			key, ok := openHashKey(ctx, args[1])
-			if !ok {
-				return rm.ERR
-			}
-			// get the current value of the hash element
-			var val rm.String;
-			key.HashGet(rm.HASH_NONE, cmd.Args[2], (*uintptr)(&val))
-			// set the element to the new value
-			key.HashSet(rm.HASH_NONE, cmd.Args[2], cmd.Args[3])
-			if val.IsNull() {
-				ctx.ReplyWithNull()
-			} else {
-				ctx.ReplyWithString(val)
-			}
-			return rm.OK
-		},
+	var err error
+	db, err = sql.Open("sqlite3", "./sqlite.db")
+	if err == nil {
+		commands = append(commands,
+			CreateCommandSQLEXEC(),
+			CreateCommandSQL(),
+		)
 	}
 }
-func CreateCommand_HGETDEL() rm.Command {
+
+// CreateCommandSQLEXEC is sql execute command
+func CreateCommandSQLEXEC() rm.Command {
 	return rm.Command{
-		Usage: "HGETDEL key field",
-		Desc: `Delete field and return value`,
-		Name:   "hgetdel",
-		Flags:  "write fast deny-oom",
-		FirstKey:1, LastKey:1, KeyStep:1,
+		Usage:    "SQLEXEC sql",
+		Desc:     `Execute a statement with SQLITE`,
+		Name:     "sqlexec",
+		Flags:    "readonly random no-cluster",
+		FirstKey: 1, LastKey: 1, KeyStep: 1,
 		Action: func(cmd rm.CmdContext) int {
 			ctx, args := cmd.Ctx, cmd.Args
-			if len(cmd.Args) != 3 {
+			if len(cmd.Args) != 2 {
 				return ctx.WrongArity()
 			}
 			ctx.AutoMemory()
-			key, ok := openHashKey(ctx, args[1])
-			if !ok {
+			// execute query
+			sql := args[1].String()
+			ctx.Log(rm.LOG_DEBUG, sql)
+			_, err := db.Exec(sql)
+			if err == nil {
+				ctx.ReplyWithOK()
+				return rm.OK
+			} else {
+				ctx.ReplyWithError(err.Error())
 				return rm.ERR
 			}
-			// get the current value of the hash element
-			var val rm.String;
-			key.HashGet(rm.HASH_NONE, cmd.Args[2], (*uintptr)(&val))
-			if val.IsNull() {
-				ctx.ReplyWithNull()
-			} else {
-				key.HashDel(args[2])
-				ctx.ReplyWithString(val)
-			}
-			return rm.OK
 		},
 	}
 }
 
-func CreateCommand_HSETM() rm.Command {
+// CreateCommandSQL execute a sqlquery
+func CreateCommandSQL() rm.Command {
 	return rm.Command{
-		Usage: "HSETM key field old-value new-value",
-		Desc: "Set when value match old",
-		Name:   "hsetm",
-		Flags:  "write fast deny-oom",
-		FirstKey:1, LastKey:1, KeyStep:1,
+		Usage:    "SQL query",
+		Desc:     `Execute a query with SQLITE`,
+		Name:     "sql",
+		Flags:    "readonly random no-cluster",
+		FirstKey: 1, LastKey: 1, KeyStep: 1,
 		Action: func(cmd rm.CmdContext) int {
 			ctx, args := cmd.Ctx, cmd.Args
-			if len(cmd.Args) != 5 {
+			if len(cmd.Args) != 2 {
 				return ctx.WrongArity()
 			}
 			ctx.AutoMemory()
-			key, ok := openHashKey(ctx, args[1])
-			if !ok {
+			sql := args[1].String()
+			ctx.Log(rm.LOG_DEBUG, sql)
+
+			// query the database
+			rows, err := db.Query(sql)
+			defer rows.Close()
+
+			// output
+			out := make([]map[string]interface{}, 0)
+			columns, err := rows.Columns()
+			if err != nil {
+				ctx.ReplyWithError(err.Error())
 				return rm.ERR
 			}
-			// get the current value of the hash element
-			var val rm.String;
-			key.HashGet(rm.HASH_NONE, args[2], &val)
 
-			if val.IsNull() || val.Compare(args[3]) != 0 {
-				ctx.ReplyWithLongLong(0)
-			} else {
-				// set the element to the new value
-				key.HashSet(rm.HASH_NONE, args[2], args[4])
-				ctx.ReplyWithLongLong(1)
+			count := len(columns)
+			values := make([]interface{}, count)
+			scanArgs := make([]interface{}, count)
+			for i := range values {
+				scanArgs[i] = &values[i]
 			}
-			return rm.OK
-		},
-	}
-}
-
-func CreateCommand_HDELM() rm.Command {
-	return rm.Command{
-		Usage: "HDELM key field old-value",
-		Desc: "Delete when value match old",
-		Name:   "hdelm",
-		Flags:  "write fast deny-oom",
-		FirstKey:1, LastKey:1, KeyStep:1,
-		Action: func(cmd rm.CmdContext) int {
-			ctx, args := cmd.Ctx, cmd.Args
-			if len(cmd.Args) != 4 {
-				return ctx.WrongArity()
+			for rows.Next() {
+				err = rows.Scan(scanArgs...)
+				if err != nil {
+					ctx.ReplyWithError(err.Error())
+					return rm.ERR
+				}
+				record := make(map[string]interface{})
+				for i, v := range values {
+					record[columns[i]] = v
+				}
+				out = append(out, record)
 			}
-			ctx.AutoMemory()
-
-			key, ok := openHashKey(ctx, args[1])
-			if !ok {
+			err = rows.Err()
+			if err != nil {
+				ctx.ReplyWithError(err.Error())
 				return rm.ERR
 			}
-			// get the current value of the hash element
-			var val rm.String;
-			key.HashGet(rm.HASH_NONE, args[2], &val)
-
-			if val.IsNull() || val.Compare(args[3]) != 0 {
-				ctx.ReplyWithLongLong(0)
-			} else {
-				ctx.ReplyWithLongLong(int64(key.HashDel(args[2])))
-			}
-			return rm.OK
-		},
-	}
-}
-func CreateCommand_HSETEX() rm.Command {
-	return rm.Command{
-		Usage: "HSETEX key field value",
-		Desc: "Set field to value ony if field is already exists",
-		Name:   "hsetex",
-		Flags:  "write fast deny-oom",
-		FirstKey:1, LastKey:1, KeyStep:1,
-		Action: func(cmd rm.CmdContext) int {
-			ctx, args := cmd.Ctx, cmd.Args
-			if len(args) != 4 {
-				return ctx.WrongArity()
-			}
-			ctx.AutoMemory()
-			key, ok := openHashKey(ctx, args[1])
-			if !ok {
+			bytes, err := json.Marshal(out)
+			if err != nil {
+				ctx.ReplyWithError(err.Error())
 				return rm.ERR
 			}
-			ctx.ReplyWithLongLong(int64(key.HashSet(rm.HASH_XX, args[2], args[3])))
+			res := string(bytes)
+
+			ctx.Log(rm.LOG_DEBUG, res)
+			ctx.ReplyWithSimpleString(res)
 			return rm.OK
 		},
 	}
