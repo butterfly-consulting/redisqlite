@@ -1,45 +1,24 @@
-# Redis hash type extension commands
+# Redisqlite
 
-rxhash is a redis module build on top of [go-rm](https://github.com/wenerme/go-rm/) implement a lot of missing commands for Redis [hash type](http://redis.io/commands/#hash).  
+A fresh implementation of the sqlite module
 
-This module provides following commands
+*currently tested only on OSX!*
 
-* `hgetset key field value`
-    * Return old value
-* `hgetdel key field`
-    * Return removed value
-* `hsetm key field old new`
-    * Set when value match old
-* `hsetex key field value`
-    * Set when field exists
-* `hdelm key field old new`
-    * Delete when value match old
+You need go 1.15, install it with `brew install go`
 
-## Install
+You need redis of course, install it with `brew install redis`
 
-> Ensure you use latest redis build from source.
+Then run `make start`
 
-```bash
-# Build module from source
-go build -v -buildmode=c-shared github.com/redismodule/rxhash/cmd/rxhash
-# Load module
-redis-server --loadmodule ./rxhash --loglevel debug
-# You can use these commands now.
-```
-
-## Test
-
-After redis-server started you can run the test script
-
-```bash
-cd ~/go/src/github.com/redismodule/rxhash
-./test.sh
-```
-
-If test failed will output something like 
+On another terminal connect to redis with `redis-cli`  and try:
 
 ```
-$ hset a a 2
-(integer) 1
-FAILED: Expected (integer)
+ $ redis-cli
+127.0.0.1:6379> sqlexec "create table t(i int)"
+OK
+127.0.0.1:6379> sqlexec "insert into t(i) values(1),(2),(3)"
+OK
+127.0.0.1:6379> sql "select * from t"
+[{"i":1},{"i":2},{"i":3}]
+127.0.0.1:6379>
 ```

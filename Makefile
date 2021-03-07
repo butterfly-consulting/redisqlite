@@ -6,5 +6,6 @@ redisqlite.so:
 clean:
 	rm redisqlite.so
 
-start: build
+.PHONY: start
+start: redisqlite.so
 	redis-server --loadmodule ./redisqlite.so --loglevel debug
