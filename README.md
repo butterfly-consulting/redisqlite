@@ -1,6 +1,8 @@
 # Redisqlite
 
-A fresh implementation of the sqlite module
+A fresh implementation of the sqlite module for redis.
+
+Truly open source, no string attached, no phone-home requirements, no licensing per instance/hour and so on.
 
 *currently tested only on OSX!*
 
@@ -13,7 +15,7 @@ Then run `make start`
 On another terminal connect to redis with `redis-cli`  and try:
 
 ```
- $ redis-cli
+$ redis-cli
 127.0.0.1:6379> sqlexec "create table t(i int)"
 OK
 127.0.0.1:6379> sqlexec "insert into t(i) values(1),(2),(3)"
