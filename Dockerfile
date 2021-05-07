@@ -1,4 +1,3 @@
-/*
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -15,19 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-*/
-package main
-
-import (
-	"github.com/butterfly-consulting/redisqlite"
-	"github.com/wenerme/go-rm/rm"
-)
-
-func main() {
-	// In case someone try to run this
-	rm.Run()
-}
-
-func init() {
-	rm.Mod = redisqlite.CreateModule()
-}
+FROM golang:1.15 AS builder
+COPY *.go go.* build/
+COPY main/* build/main/
+RUN  cd build/main &&\ 
+     GO11MODULE=off go build -v -buildmode=c-shared -o /lib/redisqlite.so &&\
+	 chmod +x /lib/redisqlite.so
+FROM redis:6.2.3-buster
+COPY --from=builder /lib/redisqlite.so /lib/redisqlite.so
+RUN echo "loadmodule /lib/redisqlite.so" >/etc/redis.conf
+CMD ["redis-server", "/etc/redis.conf"]
