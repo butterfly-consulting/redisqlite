@@ -23,4 +23,4 @@ RUN  cd build/main &&\
 FROM redis:6.2.3-buster
 COPY --from=builder /lib/redisqlite.so /lib/redisqlite.so
 RUN echo "loadmodule /lib/redisqlite.so" >/etc/redis.conf
-CMD ["redis-server", "/etc/redis.conf"]
+ENTRYPOINT ["redis-server", "/etc/redis.conf"]

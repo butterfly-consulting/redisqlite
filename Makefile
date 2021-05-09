@@ -33,4 +33,4 @@ image:
 
 .PHONY: imagestart
 imagestart:
-	docker run -p 6379:6379 -ti --rm --name redisqlite redisqlite
+	docker run -p 6379:6379 -ti --rm --name redisqlite redisqlite --requirepass password
