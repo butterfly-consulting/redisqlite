@@ -24,7 +24,7 @@ Truly open source, no string attached, no phone-home requirements, no licensing 
 
 ## How to build and run locally 
 
-Instructions for OSX, it works on any unix-like environment.
+Instructions for OSX, it should on any other unix-like environment with Go and Redis.
 
 You need go 1.15, install it (OSX: `brew install go`)
 
@@ -40,8 +40,10 @@ $ redis-cli
 OK
 127.0.0.1:6379> sqlexec "insert into t(i) values(1),(2),(3)"
 OK
-127.0.0.1:6379> sql "select * from t"
+127.0.0.1:6379> sqlmap 0 "select * from t"
 [{"i":1},{"i":2},{"i":3}]
+127.0.0.1:6379> sqlmap 1 "select * from t"
+[{"i":1}]
 127.0.0.1:6379>
 ```
 
