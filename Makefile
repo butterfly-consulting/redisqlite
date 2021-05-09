@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-redisqlite.so:
+redisqlite.so: *.go
 	cd main && go build -v -buildmode=c-shared -o ../redisqlite.so
 	chmod +x redisqlite.so
 
@@ -34,3 +34,7 @@ image:
 .PHONY: imagestart
 imagestart:
 	docker run -p 6379:6379 -ti --rm --name redisqlite redisqlite --requirepass password
+
+.PHONY: imagestop
+imagestop:
+	docker kill redisqlite

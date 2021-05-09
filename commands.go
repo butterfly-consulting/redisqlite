@@ -23,24 +23,17 @@ package redisqlite
 
 import "C"
 import (
-	"database/sql"
-	"encoding/json"
-
 	"github.com/wenerme/go-rm/rm"
 
 	// sqlite database driver
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var db *sql.DB
-
 func init() {
-	var err error
-	db, err = sql.Open("sqlite3", "./sqlite.db")
-	if err == nil {
+	if Open() == nil {
 		commands = append(commands,
 			CreateCommandSQLEXEC(),
-			CreateCommandSQL(),
+			CreateCommandSQLMAP(),
 		)
 	}
 }
@@ -62,7 +55,7 @@ func CreateCommandSQLEXEC() rm.Command {
 			// execute query
 			sql := args[1].String()
 			ctx.Log(rm.LOG_DEBUG, sql)
-			_, err := db.Exec(sql)
+			err := Exec(sql)
 			if err == nil {
 				ctx.ReplyWithOK()
 				return rm.OK
@@ -75,64 +68,33 @@ func CreateCommandSQLEXEC() rm.Command {
 }
 
 // CreateCommandSQL execute a sqlquery
-func CreateCommandSQL() rm.Command {
+func CreateCommandSQLMAP() rm.Command {
 	return rm.Command{
-		Usage:    "SQL query",
-		Desc:     `Execute a query with SQLITE`,
-		Name:     "sql",
+		Usage:    "SQLMAP query count",
+		Desc:     `Execute a query with SQLITE returning a list of maps`,
+		Name:     "sqlmap",
 		Flags:    "readonly random no-cluster",
 		FirstKey: 1, LastKey: 1, KeyStep: 1,
 		Action: func(cmd rm.CmdContext) int {
 			ctx, args := cmd.Ctx, cmd.Args
-			if len(cmd.Args) != 2 {
+			if len(cmd.Args) != 3 {
 				return ctx.WrongArity()
 			}
 			ctx.AutoMemory()
-			sql := args[1].String()
+			var count int64
+			if args[1].StringToLongLong(&count) == rm.ERR {
+				ctx.ReplyWithError("invalid count")
+				return rm.ERR
+			}
+			sql := args[2].String()
 			ctx.Log(rm.LOG_DEBUG, sql)
 
 			// query the database
-			rows, err := db.Query(sql)
-			defer rows.Close()
-
-			// output
-			out := make([]map[string]interface{}, 0)
-			columns, err := rows.Columns()
+			res, err := Query(sql, count)
 			if err != nil {
 				ctx.ReplyWithError(err.Error())
 				return rm.ERR
 			}
-
-			count := len(columns)
-			values := make([]interface{}, count)
-			scanArgs := make([]interface{}, count)
-			for i := range values {
-				scanArgs[i] = &values[i]
-			}
-			for rows.Next() {
-				err = rows.Scan(scanArgs...)
-				if err != nil {
-					ctx.ReplyWithError(err.Error())
-					return rm.ERR
-				}
-				record := make(map[string]interface{})
-				for i, v := range values {
-					record[columns[i]] = v
-				}
-				out = append(out, record)
-			}
-			err = rows.Err()
-			if err != nil {
-				ctx.ReplyWithError(err.Error())
-				return rm.ERR
-			}
-			bytes, err := json.Marshal(out)
-			if err != nil {
-				ctx.ReplyWithError(err.Error())
-				return rm.ERR
-			}
-			res := string(bytes)
-
 			ctx.Log(rm.LOG_DEBUG, res)
 			ctx.ReplyWithSimpleString(res)
 			return rm.OK
