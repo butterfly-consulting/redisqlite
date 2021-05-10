@@ -14,13 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-FROM golang:1.15 AS builder
+FROM redis:5.0.3 as builder
+RUN apt-get update &&\
+    apt-get -y install curl gcc &&\
+    curl -L https://golang.org/dl/go1.16.4.linux-amd64.tar.gz | tar xzvf - -C /usr
+ENV PATH=/bin:/usr/bin:/usr/go/bin
 COPY *.go go.* build/
 COPY main/* build/main/
 RUN  cd build/main &&\ 
      GO11MODULE=off go build -v -buildmode=c-shared -o /lib/redisqlite.so &&\
-	 chmod +x /lib/redisqlite.so
-FROM redis:6.2.3-buster
+	chmod +x /lib/redisqlite.so
+FROM redis:5.0.3
 COPY --from=builder /lib/redisqlite.so /lib/redisqlite.so
 RUN echo "loadmodule /lib/redisqlite.so" >/etc/redis.conf
 ENTRYPOINT ["redis-server", "/etc/redis.conf"]
