@@ -22,9 +22,11 @@ A fresh implementation of the sqlite module for redis.
 
 Truly open source, no string attached, no phone-home requirements, no licensing per instance/hour and so on.
 
+# Installation
+
 ## How to build and run locally 
 
-Instructions for OSX, it should on any other unix-like environment with Go and Redis.
+Instructions for OSX, it should work on any other unix-like environment with Go and Redis.
 
 You need go 1.15, install it (OSX: `brew install go`)
 
@@ -57,3 +59,26 @@ Use:
 make image
 make imagestart
 ```
+
+It will build and start a local image called `redisqlite` with redis including the module.
+
+# Command Reference
+
+- `SQLPREP (<query>|<id>)`: 
+  if the argument is not numeric, it is sql to prepare a statement. 
+  Returns a numeric `<id>`that identifies the statement in queryes.
+  If the argument is numeric it is assumed to be a previously prepared statement that is then closed.
+
+- `SQLEXEC (<statement>|<id>) [<args>]`: 
+   execute a sql statement, either a prepared one or an sql statement.
+   If the argument is numeric it is assumed to be an `<id>` of a prepared statement, otherwise it assumed to be an SQL statements.
+   It returns the number of rows affected when relevant or -1, and the last id generated when relevant or -1. 
+
+- `SQLMAP <limit> (<query>|<number>) [<args> ...]`
+ 
+- `SQLARR <limit> <query>|<number>) [<args> ...]`
+
+- `SQLBEGIN`
+
+- `SQLCOMMIT`
+

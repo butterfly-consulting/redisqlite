@@ -34,6 +34,10 @@ func init() {
 		commands = append(commands,
 			CreateCommandSQLEXEC(),
 			CreateCommandSQLMAP(),
+			CreateCommandSQLARR(),
+			//CreateCommandSQLPREP(),
+			//CreateCommandSQLBEGIN(),
+			//CreateCommandSQLCOMMIT(),
 		)
 	}
 }
@@ -55,9 +59,19 @@ func CreateCommandSQLEXEC() rm.Command {
 			// execute query
 			sql := args[1].String()
 			ctx.Log(rm.LOG_DEBUG, sql)
-			err := Exec(sql)
+
+			// collect args
+			params := make([]interface{}, 0)
+			i := 2
+			for i < len(args) {
+				params = append(params, args[i].String())
+				i++
+			}
+			count, lastId, err := Exec(sql, params)
 			if err == nil {
-				ctx.ReplyWithOK()
+				ctx.ReplyWithArray(2)
+				ctx.ReplyWithLongLong(count)
+				ctx.ReplyWithLongLong(lastId)
 				return rm.OK
 			} else {
 				ctx.ReplyWithError(err.Error())
@@ -77,7 +91,7 @@ func CreateCommandSQLMAP() rm.Command {
 		FirstKey: 1, LastKey: 1, KeyStep: 1,
 		Action: func(cmd rm.CmdContext) int {
 			ctx, args := cmd.Ctx, cmd.Args
-			if len(cmd.Args) != 3 {
+			if len(cmd.Args) <= 3 {
 				return ctx.WrongArity()
 			}
 			ctx.AutoMemory()
@@ -89,14 +103,67 @@ func CreateCommandSQLMAP() rm.Command {
 			sql := args[2].String()
 			ctx.Log(rm.LOG_DEBUG, sql)
 
+			// collect args
+			params := make([]interface{}, 0)
+			i := 3
+			for i < len(args) {
+				params = append(params, args[i].String())
+				i++
+			}
 			// query the database
-			res, err := Query(sql, count)
+			res, err := Query(sql, params, true, count)
 			if err != nil {
 				ctx.ReplyWithError(err.Error())
 				return rm.ERR
 			}
-			ctx.Log(rm.LOG_DEBUG, res)
-			ctx.ReplyWithSimpleString(res)
+			ctx.ReplyWithArray(int64(len(res)))
+			for _, v := range res {
+				ctx.ReplyWithSimpleString(v)
+			}
+			return rm.OK
+		},
+	}
+}
+
+// CreateCommandSQL execute a sqlquery
+func CreateCommandSQLARR() rm.Command {
+	return rm.Command{
+		Usage:    "SQLLST query count",
+		Desc:     `Execute a query with SQLITE returning an array of json arrays`,
+		Name:     "sqlarr",
+		Flags:    "readonly random no-cluster",
+		FirstKey: 1, LastKey: 1, KeyStep: 1,
+		Action: func(cmd rm.CmdContext) int {
+			ctx, args := cmd.Ctx, cmd.Args
+			if len(cmd.Args) <= 3 {
+				return ctx.WrongArity()
+			}
+			ctx.AutoMemory()
+			var count int64
+			if args[1].StringToLongLong(&count) == rm.ERR {
+				ctx.ReplyWithError("invalid count")
+				return rm.ERR
+			}
+			sql := args[2].String()
+			ctx.Log(rm.LOG_DEBUG, sql)
+
+			// collect args
+			params := make([]interface{}, 0)
+			i := 3
+			for i < len(args) {
+				params = append(params, args[i].String())
+				i++
+			}
+			// query the database
+			res, err := Query(sql, params, false, count)
+			if err != nil {
+				ctx.ReplyWithError(err.Error())
+				return rm.ERR
+			}
+			ctx.ReplyWithArray(int64(len(res)))
+			for _, v := range res {
+				ctx.ReplyWithSimpleString(v)
+			}
 			return rm.OK
 		},
 	}

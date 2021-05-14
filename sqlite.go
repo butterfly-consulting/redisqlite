@@ -4,66 +4,184 @@ import "C"
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
+	"strconv"
 
 	// sqlite database driver
 	_ "github.com/mattn/go-sqlite3"
 )
 
+// database access
 var db *sql.DB
 
+// prepared statement cache
+const PREP_MAX = 1000000
+
+var prep_index = 0
+var prep_cache map[int]*sql.Stmt
+
+// Open opens the sqlite database
 func Open() (err error) {
 	db, err = sql.Open("sqlite3", "./sqlite.db")
+	prep_cache = make(map[int]*sql.Stmt)
 	return err
 }
 
-func Exec(sql string) (err error) {
-	_, err = db.Exec(sql)
-	return err
-}
-
-func Query(sql string, count int64) (string, error) {
-	rows, err := db.Query(sql)
-	if err != nil {
-		return "", err
+// Exec execute a statement applying an array of arguments,
+// returns the number of affected rows and the last id modified, when applicable
+func Exec(stmtOrNumber string, args []interface{}) (count int64, lastId int64, err error) {
+	var res sql.Result
+	// select number or string
+	if index, err := strconv.Atoi(stmtOrNumber); err == nil {
+		stmt := prep_cache[index]
+		if stmt == nil {
+			return -1, -1, errors.New("no such prepared statement index")
+		}
+		if len(args) == 0 {
+			res, err = stmt.Exec()
+		} else {
+			res, err = stmt.Exec(args...)
+		}
+		if err != nil {
+			return -1, -1, err
+		}
+	} else {
+		if len(args) == 0 {
+			res, err = db.Exec(stmtOrNumber)
+		} else {
+			res, err = db.Exec(stmtOrNumber, args...)
+		}
+		if err != nil {
+			return -1, -1, err
+		}
 	}
-	defer rows.Close()
 
-	// output
-	out := make([]map[string]interface{}, 0)
+	count, err = res.RowsAffected()
+	if err != nil {
+		count = -1
+	}
+	lastId, err = res.LastInsertId()
+	if err != nil {
+		lastId = -1
+	}
+	return lastId, count, nil
+}
+
+// Query execute a query applying an array of args
+// query can be either an sql string or a number
+// if it is a number then it will execute a prepared statement idenfied by the number returned by Prep
+// returns an array of results, either as an array of maps or as an array of arrays
+// according the `asMap` parameters, and returns up to `count` results (0 for everything)
+func Query(queryOrNumber string, args []interface{}, asMap bool, count int64) (res []string, err error) {
+	// execute a query
+	var rows *sql.Rows
+
+	// grab cached stmp
+	if index, err := strconv.Atoi(queryOrNumber); err == nil {
+		stmt := prep_cache[index]
+		if stmt == nil {
+			return nil, errors.New("no such prepared statement index")
+		}
+		if len(args) == 0 {
+			rows, err = stmt.Query(args...)
+		} else {
+			rows, err = stmt.Query(args...)
+		}
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+	} else {
+		if len(args) == 0 {
+			rows, err = db.Query(queryOrNumber)
+		} else {
+			rows, err = db.Query(queryOrNumber, args...)
+		}
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+	}
+
+	// prepare output
+	out := make([]string, 0)
 	columns, err := rows.Columns()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-
 	ncol := len(columns)
 	values := make([]interface{}, ncol)
 	scanArgs := make([]interface{}, ncol)
 	for i := range values {
 		scanArgs[i] = &values[i]
 	}
+	// scan rows
 	for rows.Next() {
 		err = rows.Scan(scanArgs...)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
-		record := make(map[string]interface{})
-		for i, v := range values {
-			record[columns[i]] = v
+
+		var bytes []byte
+		if asMap {
+			// serialize as map
+			record := make(map[string]interface{})
+			for i, v := range values {
+				record[columns[i]] = v
+			}
+			// serialize record
+			bytes, err = json.Marshal(record)
+			if err != nil {
+				continue
+			}
+		} else {
+			// serialize as array
+			array := []interface{}{}
+			for _, v := range values {
+				array = append(array, v)
+			}
+			// serialize record
+			bytes, err = json.Marshal(array)
+			if err != nil {
+				continue
+			}
 		}
-		out = append(out, record)
-		// next
+		// collect
+		out = append(out, string(bytes))
+
+		// next until exhausted
 		count--
 		if count == 0 {
 			break
 		}
 	}
-	err = rows.Err()
-	if err != nil {
-		return "", err
+	return out, rows.Err()
+}
+
+// Prep accepts prepares a sql statement and stores it in a table
+// returning a number. It also accepts a number, and if it corresponds
+// to the number returned by a previous statement, it closes the prepared stateent
+// you can store up to one million statements, older will be automatically closed and dropper
+func Prep(queryOrNumber string) (int, error) {
+	if index, err := strconv.Atoi(queryOrNumber); err == nil {
+		if index < PREP_MAX && prep_cache[index] != nil {
+			prep_cache[index].Close()
+			prep_cache[index] = nil
+			return -1, nil
+		}
 	}
-	bytes, err := json.Marshal(out)
-	if err != nil {
-		return "", err
+
+	// get next index and close very old statements if still unclosed
+	prep_index = (prep_index + 1) % PREP_MAX
+	if prep_cache[prep_index] != nil {
+		prep_cache[prep_index].Close()
 	}
-	return string(bytes), nil
+
+	// prepare statement and store it
+	stmt, err := db.Prepare(queryOrNumber)
+	if err != nil {
+		return -1, err
+	}
+	prep_cache[prep_index] = stmt
+	return prep_index, nil
 }
