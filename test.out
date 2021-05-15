@@ -1,0 +1,31 @@
+> sqlexec insert into t(i,s) values('a',1),('b',2),('c',3)
+3
+3
+> sqlmap 0 select * from t
+{"i":"a","s":"1"}
+{"i":"b","s":"2"}
+{"i":"c","s":"3"}
+> sqlarr 0 select * from t
+["a","1"]
+["b","2"]
+["c","3"]
+> sqlmap and sqlarr with prep
+{"i":"c","s":"3"}
+["c","3"]
+OK
+> sqlexec begin ; insert into t(i,s) values('d',4); commit
+4
+1
+> sqlmap 0 select * from t
+{"i":"a","s":"1"}
+{"i":"b","s":"2"}
+{"i":"c","s":"3"}
+{"i":"d","s":"4"}
+> sqlexec begin ; insert into t(i,s) values('e',5); rollback
+5
+1
+> sqlmap 0 select * from t
+{"i":"a","s":"1"}
+{"i":"b","s":"2"}
+{"i":"c","s":"3"}
+{"i":"d","s":"4"}

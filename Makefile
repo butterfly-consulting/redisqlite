@@ -33,9 +33,22 @@ image:
 
 .PHONY: imagestart
 imagestart: image
-	docker run -p 6379:6379 -d --rm --name redisqlite redisqlite --requirepass password
-	docker logs redisqlite
+	docker run -p 6379:6379 -ti --rm --name redisqlite redisqlite --requirepass password
 
 .PHONY: imagestop
 imagestop:
 	docker kill redisqlite
+
+
+.PHONY: test
+test: image
+	-@docker kill redisqlite
+	-@docker rm redisqlite
+	docker run -p 6379:6379 -d --rm --name redisqlite redisqlite
+	go test
+	bash test.sh >test.out.compare
+	if diff test.out test.out.compare ; then echo "PASS"; else echo "FAIL"; fi
+	
+
+
+
