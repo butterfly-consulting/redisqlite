@@ -64,21 +64,27 @@ It will build and start a local image called `redisqlite` with redis including t
 
 # Command Reference
 
-- `SQLPREP (<query>|<id>)`: 
+- `SQLPREP (<query>|<id>)`:<br> 
   if the argument is not numeric, it is sql to prepare a statement. 
-  Returns a numeric `<id>`that identifies the statement in queryes.
+  Returns a numeric `<id>` that identifies the statement in queryes.
   If the argument is numeric it is assumed to be a previously prepared statement that is then closed.
 
-- `SQLEXEC (<statement>|<id>) [<args>]`: 
+- `SQLEXEC (<statement>|<id>) [<args>]`: <br>
    execute a sql statement, either a prepared one or an sql statement.
    If the argument is numeric it is assumed to be an `<id>` of a prepared statement, otherwise it assumed to be an SQL statements.
    It returns the number of rows affected when relevant or -1, and the last id generated when relevant or -1. 
 
-- `SQLMAP <limit> (<query>|<number>) [<args> ...]`
+- `SQLMAP <limit> (<query>|<id>) [<args> ...]`:<br>
+   execute a SQL query, either a prepared one or a sql query.
+   If the argument is number it is assumed to be an `<id>` of a prepared statement, otherwiser it is assumed to be an SQL qyery.
+   It returns an array of string representing a JSON maps.
+   It limits the number of elements in the returned arrays by  `<limit>`; 0 means unlimited.
+   Each object corresponds to a record, where each key corresponds to field names and each value is the corresponding field value.
  
-- `SQLARR <limit> <query>|<number>) [<args> ...]`
-
-- `SQLBEGIN`
-
-- `SQLCOMMIT`
+- `SQLARR <limit> <query>|<number>) [<args> ...]`:<br>
+   execute a SQL query, either a prepared one or a sql query.
+   If the argument is number it is assumed to be an `<id>` of a prepared statement, otherwiser it is assumed to be an SQL qyery.
+   It returns an array of string representing  JSON arrays.
+   It limits the number of elements in the returned arrays by  `<limit>`; 0 means unlimited.
+   Each array represents a record, with the values of the fields in the array.
 

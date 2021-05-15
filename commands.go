@@ -35,9 +35,7 @@ func init() {
 			CreateCommandSQLEXEC(),
 			CreateCommandSQLMAP(),
 			CreateCommandSQLARR(),
-			//CreateCommandSQLPREP(),
-			//CreateCommandSQLBEGIN(),
-			//CreateCommandSQLCOMMIT(),
+			CreateCommandSQLPREP(),
 		)
 	}
 }
@@ -84,14 +82,14 @@ func CreateCommandSQLEXEC() rm.Command {
 // CreateCommandSQL execute a sqlquery
 func CreateCommandSQLMAP() rm.Command {
 	return rm.Command{
-		Usage:    "SQLMAP query count",
+		Usage:    "SQLMAP limit query [args...]",
 		Desc:     `Execute a query with SQLITE returning a list of maps`,
 		Name:     "sqlmap",
 		Flags:    "readonly random no-cluster",
 		FirstKey: 1, LastKey: 1, KeyStep: 1,
 		Action: func(cmd rm.CmdContext) int {
 			ctx, args := cmd.Ctx, cmd.Args
-			if len(cmd.Args) <= 3 {
+			if len(cmd.Args) < 3 {
 				return ctx.WrongArity()
 			}
 			ctx.AutoMemory()
@@ -135,7 +133,7 @@ func CreateCommandSQLARR() rm.Command {
 		FirstKey: 1, LastKey: 1, KeyStep: 1,
 		Action: func(cmd rm.CmdContext) int {
 			ctx, args := cmd.Ctx, cmd.Args
-			if len(cmd.Args) <= 3 {
+			if len(cmd.Args) < 3 {
 				return ctx.WrongArity()
 			}
 			ctx.AutoMemory()
@@ -165,6 +163,40 @@ func CreateCommandSQLARR() rm.Command {
 				ctx.ReplyWithSimpleString(v)
 			}
 			return rm.OK
+		},
+	}
+}
+
+// CreateCommandSQLPREP prepares a statement
+func CreateCommandSQLPREP() rm.Command {
+	return rm.Command{
+		Usage:    "SQLPREP sql",
+		Desc:     `Prepare a statement with SQLITE`,
+		Name:     "sqlprep",
+		Flags:    "readonly random no-cluster",
+		FirstKey: 1, LastKey: 1, KeyStep: 1,
+		Action: func(cmd rm.CmdContext) int {
+			ctx, args := cmd.Ctx, cmd.Args
+			if len(cmd.Args) != 2 {
+				return ctx.WrongArity()
+			}
+			ctx.AutoMemory()
+			// execute query
+			sql := args[1].String()
+			ctx.Log(rm.LOG_DEBUG, sql)
+
+			index, err := Prep(sql)
+			if err == nil {
+				if index == -1 {
+					ctx.ReplyWithOK()
+				} else {
+					ctx.ReplyWithLongLong(int64(index))
+				}
+				return rm.OK
+			} else {
+				ctx.ReplyWithError(err.Error())
+				return rm.ERR
+			}
 		},
 	}
 }

@@ -80,6 +80,8 @@ func ExamplePrep() {
 	// prepare
 	bad, err := Prep("blabla")
 	fmt.Println(1, bad, err)
+	bad, err = Prep("9999")
+	fmt.Println(1.1, bad, err)
 	crt, err := Prep("create table tttt(k string, i int)")
 	fmt.Println(2, crt, err)
 	_, _, err = Exec(strconv.Itoa(crt), nil)
@@ -121,7 +123,9 @@ func ExamplePrep() {
 	fmt.Println(16, err)
 	_, err = Query("999", nil, true, 0)
 	fmt.Println(17, err)
+	// Output:
 	// 1 -1 near "blabla": syntax error
+	// 1.1 -1 invalid prepared statement index
 	// 2 2 <nil>
 	// 3 <nil>
 	// 4 true <nil>

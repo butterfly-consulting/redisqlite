@@ -37,20 +37,12 @@ func Exec(stmtOrNumber string, args []interface{}) (count int64, lastId int64, e
 		if stmt == nil {
 			return -1, -1, errors.New("no such prepared statement index")
 		}
-		if len(args) == 0 {
-			res, err = stmt.Exec()
-		} else {
-			res, err = stmt.Exec(args...)
-		}
+		res, err = stmt.Exec(args...)
 		if err != nil {
 			return -1, -1, err
 		}
 	} else {
-		if len(args) == 0 {
-			res, err = db.Exec(stmtOrNumber)
-		} else {
-			res, err = db.Exec(stmtOrNumber, args...)
-		}
+		res, err = db.Exec(stmtOrNumber, args...)
 		if err != nil {
 			return -1, -1, err
 		}
@@ -82,21 +74,13 @@ func Query(queryOrNumber string, args []interface{}, asMap bool, count int64) (r
 		if stmt == nil {
 			return nil, errors.New("no such prepared statement index")
 		}
-		if len(args) == 0 {
-			rows, err = stmt.Query(args...)
-		} else {
-			rows, err = stmt.Query(args...)
-		}
+		rows, err = stmt.Query(args...)
 		if err != nil {
 			return nil, err
 		}
 		defer rows.Close()
 	} else {
-		if len(args) == 0 {
-			rows, err = db.Query(queryOrNumber)
-		} else {
-			rows, err = db.Query(queryOrNumber, args...)
-		}
+		rows, err = db.Query(queryOrNumber, args...)
 		if err != nil {
 			return nil, err
 		}
@@ -168,6 +152,8 @@ func Prep(queryOrNumber string) (int, error) {
 			prep_cache[index].Close()
 			prep_cache[index] = nil
 			return -1, nil
+		} else {
+			return -1, errors.New("invalid prepared statement index")
 		}
 	}
 
