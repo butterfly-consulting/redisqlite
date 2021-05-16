@@ -1,31 +1,39 @@
-> sqlexec insert into t(i,s) values('a',1),('b',2),('c',3)
+> sqlexec insert into t(s,i) values('a',1),('b',2)
+2
+2
+> sqlexec insert into t(s,i) values(?,?) c 3
 3
-3
-> sqlmap 0 select * from t
-{"i":"a","s":"1"}
-{"i":"b","s":"2"}
-{"i":"c","s":"3"}
-> sqlarr 0 select * from t
-["a","1"]
-["b","2"]
-["c","3"]
-> sqlmap and sqlarr with prep
-{"i":"c","s":"3"}
-["c","3"]
-OK
-> sqlexec begin ; insert into t(i,s) values('d',4); commit
-4
 1
 > sqlmap 0 select * from t
-{"i":"a","s":"1"}
-{"i":"b","s":"2"}
-{"i":"c","s":"3"}
-{"i":"d","s":"4"}
-> sqlexec begin ; insert into t(i,s) values('e',5); rollback
+{"i":1,"s":"a"}
+{"i":2,"s":"b"}
+{"i":3,"s":"c"}
+> sqlarr 0 select * from t
+[1,"a"]
+[2,"b"]
+[3,"c"]
+> sqlmap and sqlarr with prep
+{"i":3,"s":"c"}
+4
+1
+
+OK
+OK
+> sqlexec begin ; insert into t(i,s) values(5,'e'); commit
 5
 1
 > sqlmap 0 select * from t
-{"i":"a","s":"1"}
-{"i":"b","s":"2"}
-{"i":"c","s":"3"}
-{"i":"d","s":"4"}
+{"i":1,"s":"a"}
+{"i":2,"s":"b"}
+{"i":3,"s":"c"}
+{"i":4,"s":"d"}
+{"i":5,"s":"e"}
+> sqlexec begin ; insert into t(i,s) values(6,'f'); rollback
+6
+1
+> sqlmap 0 select * from t
+{"i":1,"s":"a"}
+{"i":2,"s":"b"}
+{"i":3,"s":"c"}
+{"i":4,"s":"d"}
+{"i":5,"s":"e"}

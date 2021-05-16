@@ -43,14 +43,14 @@ func init() {
 // CreateCommandSQLEXEC is sql execute command
 func CreateCommandSQLEXEC() rm.Command {
 	return rm.Command{
-		Usage:    "SQLEXEC sql",
+		Usage:    "SQLEXEC sql [args...]",
 		Desc:     `Execute a statement with SQLITE`,
 		Name:     "sqlexec",
 		Flags:    "readonly random no-cluster",
 		FirstKey: 1, LastKey: 1, KeyStep: 1,
 		Action: func(cmd rm.CmdContext) int {
 			ctx, args := cmd.Ctx, cmd.Args
-			if len(cmd.Args) != 2 {
+			if len(cmd.Args) < 2 {
 				return ctx.WrongArity()
 			}
 			ctx.AutoMemory()

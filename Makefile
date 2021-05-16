@@ -47,8 +47,7 @@ test: image
 	docker run -p 6379:6379 -d --rm --name redisqlite redisqlite
 	go test
 	bash test.sh >test.out.compare
+	docker kill redisqlite
 	if diff test.out test.out.compare ; then echo "PASS"; else echo "FAIL"; fi
-	
-
 
 
