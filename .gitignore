@@ -97,3 +97,4 @@ ignored
 attic/
 *.db
 *.rdb
+*.compare
