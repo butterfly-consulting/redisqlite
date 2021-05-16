@@ -69,7 +69,7 @@ It will build and start a local image called `redisqlite` with redis including t
   Returns a numeric `<id>` that identifies the statement in queryes.
   If the argument is numeric it is assumed to be a previously prepared statement that is then closed.
 
-- `SQLEXEC (<statement>|<id>) [<args>]`: <br>
+- `SQLEXEC (<statement>|<id>) [<args> ...]`: <br>
    execute a sql statement, either a prepared one or an sql statement.
    If the argument is numeric it is assumed to be an `<id>` of a prepared statement, otherwise it assumed to be an SQL statements.
    It returns the number of rows affected when relevant or -1, and the last id generated when relevant or -1. 
