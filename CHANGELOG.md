@@ -1,2 +1,3 @@
+- v1.0.2: default build to amd64 instead of arm64
 - v1.0.1: fixed arity error in `sqlexec` 
 - v1.0: initial release
