@@ -17,7 +17,7 @@
 FROM redis:5.0.3 as builder
 RUN apt-get update &&\
     apt-get -y install curl gcc &&\
-    curl -L https://golang.org/dl/go1.16.4.linux-arm64.tar.gz | tar xzvf - -C /usr
+    curl -L https://golang.org/dl/go1.16.4.linux-amd64.tar.gz | tar xzvf - -C /usr
 ENV PATH=/bin:/usr/bin:/usr/go/bin
 COPY *.go go.* build/
 COPY main/* build/main/
