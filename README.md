@@ -67,7 +67,8 @@ It will build and start a local image called `redisqlite` with redis including t
 - `SQLPREP (<query>|<id>)`:<br> 
   if the argument is not numeric, it is sql to prepare a statement. 
   Returns a numeric `<id>` that identifies the statement in queryes.
-  If the argument is numeric it is assumed to be a previously prepared statement that is then closed.
+  If the argument is numeric it is assumed to be a previously prepared statement that is then closed. 
+  You can create up to 10000 prepared statements, more will return an error. You can use `SQLPREP clean_prep_cache` to close all the prepared statements.
 
 - `SQLEXEC (<statement>|<id>) [<args> ...]`: <br>
    execute a sql statement, either a prepared one or an sql statement.

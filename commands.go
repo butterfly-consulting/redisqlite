@@ -187,7 +187,7 @@ func CreateCommandSQLPREP() rm.Command {
 
 			index, err := Prep(sql)
 			if err == nil {
-				if index == -1 {
+				if index == 0 {
 					ctx.ReplyWithOK()
 				} else {
 					ctx.ReplyWithLongLong(int64(index))

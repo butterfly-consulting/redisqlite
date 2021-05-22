@@ -83,50 +83,50 @@ func ExamplePrep() {
 	bad, err = Prep("9999")
 	fmt.Println(1.1, bad, err)
 	crt, err := Prep("create table tttt(k string, i int)")
-	fmt.Println(2, crt, err)
-	_, _, err = Exec(strconv.Itoa(crt), nil)
+	fmt.Println(2, crt > 0, err)
+	_, _, err = Exec(strconv.FormatUint(crt, 10), nil)
 	fmt.Println(3, err)
 
 	sel, err := Prep("select k from tttt where i=?")
-	fmt.Println(4, sel >= 0, err)
+	fmt.Println(4, sel > 0, err)
 	ins, err := Prep("insert into tttt values(?,?)")
-	fmt.Println(5, ins >= 0, err)
+	fmt.Println(5, ins > 0, err)
 
 	// insert
-	_, _, err = Exec(strconv.Itoa(ins), nil)
+	_, _, err = Exec(strconv.FormatUint(ins, 10), nil)
 	fmt.Println(6, err)
-	count, lastId, err := Exec(strconv.Itoa(ins), []interface{}{"a", 1})
+	count, lastId, err := Exec(strconv.FormatUint(ins, 10), []interface{}{"a", 1})
 	fmt.Println(7, count, lastId, err)
-	count, lastId, err = Exec(strconv.Itoa(ins), []interface{}{"b", 2})
+	count, lastId, err = Exec(strconv.FormatUint(ins, 10), []interface{}{"b", 2})
 	fmt.Println(8, count, lastId, err)
 
 	// select
-	_, err = Query(strconv.Itoa(sel), nil, true, 0)
+	_, err = Query(strconv.FormatUint(sel, 10), nil, true, 0)
 	fmt.Println(9, err)
-	_, err = Query(strconv.Itoa(sel), []interface{}{"b", 2}, true, 0)
+	_, err = Query(strconv.FormatUint(sel, 10), []interface{}{"b", 2}, true, 0)
 	fmt.Println(10, err)
-	res, err := Query(strconv.Itoa(sel), []interface{}{2}, true, 0)
+	res, err := Query(strconv.FormatUint(sel, 10), []interface{}{2}, true, 0)
 	fmt.Println(11, err, res)
 
 	// unprep
-	ins1, err := Prep(strconv.Itoa(sel))
+	ins1, err := Prep(strconv.FormatUint(sel, 10))
 	fmt.Println(12, ins1, res)
-	sel1, err := Prep(strconv.Itoa(ins))
+	sel1, err := Prep(strconv.FormatUint(ins, 10))
 	fmt.Println(13, sel1, res)
 
 	// check no prepared statement
-	_, _, err = Exec(strconv.Itoa(sel), nil)
+	_, _, err = Exec(strconv.FormatUint(sel, 10), nil)
 	fmt.Println(14, err)
 	_, _, err = Exec("999", nil)
 	fmt.Println(15, err)
-	_, err = Query(strconv.Itoa(ins), nil, true, 0)
+	_, err = Query(strconv.FormatUint(ins, 10), nil, true, 0)
 	fmt.Println(16, err)
 	_, err = Query("999", nil, true, 0)
 	fmt.Println(17, err)
 	// Output:
-	// 1 -1 near "blabla": syntax error
-	// 1.1 -1 invalid prepared statement index
-	// 2 2 <nil>
+	// 1 0 near "blabla": syntax error
+	// 1.1 0 invalid prepared statement index
+	// 2 true <nil>
 	// 3 <nil>
 	// 4 true <nil>
 	// 5 true <nil>
@@ -136,12 +136,31 @@ func ExamplePrep() {
 	// 9 sql: expected 1 arguments, got 0
 	// 10 sql: expected 1 arguments, got 2
 	// 11 <nil> [{"k":"b"}]
-	// 12 -1 [{"k":"b"}]
-	// 13 -1 [{"k":"b"}]
+	// 12 0 [{"k":"b"}]
+	// 13 0 [{"k":"b"}]
 	// 14 no such prepared statement index
 	// 15 no such prepared statement index
 	// 16 no such prepared statement index
 	// 17 no such prepared statement index
+}
+
+func ExampleFillPrep() {
+	// prepare
+	i := 0
+	for i <= PREP_MAX_SIZE {
+		Prep("create table et(i int)")
+		i += 1
+	}
+	crt, err := Prep("create table et(i int)")
+	fmt.Println(crt, err)
+	crt, err = Prep("clean_prep_cache")
+	fmt.Println(crt, err)
+	crt, err = Prep("create table et1(i int)")
+	fmt.Println(crt > 0, err)
+	// Output:
+	// 0 too many prepared statements, use clean_prep_cache on prep to clean
+	// 0 <nil>
+	// true <nil>
 }
 
 func TestMain(m *testing.M) {
