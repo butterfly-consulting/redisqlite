@@ -1,6 +1,7 @@
 package redisqlite
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
 	"strconv"
@@ -76,6 +77,21 @@ func ExampleQueryExec() {
 	// 6.1 <nil> 3 [[1] [2] [3]]
 }
 
+func ExampleNextIndex() {
+	MAX := uint32(4)
+	cache := make(map[uint32]*sql.Stmt)
+	stat, _ := db.Prepare("select 2+2")
+	fmt.Println(NextIndex(1, cache, MAX))
+	cache[2] = stat
+	fmt.Println(NextIndex(1, cache, MAX))
+	fmt.Println(NextIndex(3, cache, MAX))
+	stat.Close()
+	// Output:
+	// 2
+	// 3
+	// 1
+}
+
 func ExamplePrep() {
 	// prepare
 	bad, err := Prep("blabla")
@@ -84,7 +100,7 @@ func ExamplePrep() {
 	fmt.Println(1.1, bad, err)
 	crt, err := Prep("create table tttt(k string, i int)")
 	fmt.Println(2, crt > 0, err)
-	_, _, err = Exec(strconv.FormatUint(crt, 10), nil)
+	_, _, err = Exec(strconv.FormatUint(uint64(crt), 10), nil)
 	fmt.Println(3, err)
 
 	sel, err := Prep("select k from tttt where i=?")
@@ -93,33 +109,33 @@ func ExamplePrep() {
 	fmt.Println(5, ins > 0, err)
 
 	// insert
-	_, _, err = Exec(strconv.FormatUint(ins, 10), nil)
+	_, _, err = Exec(strconv.FormatUint(uint64(ins), 10), nil)
 	fmt.Println(6, err)
-	count, lastId, err := Exec(strconv.FormatUint(ins, 10), []interface{}{"a", 1})
+	count, lastId, err := Exec(strconv.FormatUint(uint64(ins), 10), []interface{}{"a", 1})
 	fmt.Println(7, count, lastId, err)
-	count, lastId, err = Exec(strconv.FormatUint(ins, 10), []interface{}{"b", 2})
+	count, lastId, err = Exec(strconv.FormatUint(uint64(ins), 10), []interface{}{"b", 2})
 	fmt.Println(8, count, lastId, err)
 
 	// select
-	_, err = Query(strconv.FormatUint(sel, 10), nil, true, 0)
+	_, err = Query(strconv.FormatUint(uint64(sel), 10), nil, true, 0)
 	fmt.Println(9, err)
-	_, err = Query(strconv.FormatUint(sel, 10), []interface{}{"b", 2}, true, 0)
+	_, err = Query(strconv.FormatUint(uint64(sel), 10), []interface{}{"b", 2}, true, 0)
 	fmt.Println(10, err)
-	res, err := Query(strconv.FormatUint(sel, 10), []interface{}{2}, true, 0)
+	res, err := Query(strconv.FormatUint(uint64(sel), 10), []interface{}{2}, true, 0)
 	fmt.Println(11, err, res)
 
 	// unprep
-	ins1, err := Prep(strconv.FormatUint(sel, 10))
+	ins1, err := Prep(strconv.FormatUint(uint64(sel), 10))
 	fmt.Println(12, ins1, res)
-	sel1, err := Prep(strconv.FormatUint(ins, 10))
+	sel1, err := Prep(strconv.FormatUint(uint64(ins), 10))
 	fmt.Println(13, sel1, res)
 
 	// check no prepared statement
-	_, _, err = Exec(strconv.FormatUint(sel, 10), nil)
+	_, _, err = Exec(strconv.FormatUint(uint64(sel), 10), nil)
 	fmt.Println(14, err)
 	_, _, err = Exec("999", nil)
 	fmt.Println(15, err)
-	_, err = Query(strconv.FormatUint(ins, 10), nil, true, 0)
+	_, err = Query(strconv.FormatUint(uint64(ins), 10), nil, true, 0)
 	fmt.Println(16, err)
 	_, err = Query("999", nil, true, 0)
 	fmt.Println(17, err)

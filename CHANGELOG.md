@@ -1,3 +1,5 @@
+- v1.0.4: avodiding concerns with python and potential clash of existing indexes
+- v1.0.3: better handling of index generatin
 - v1.0.2: default build to amd64 instead of arm64
 - v1.0.1: fixed arity error in `sqlexec` 
 - v1.0: initial release

@@ -16,14 +16,15 @@ var db *sql.DB
 
 // prepared statement cache
 const PREP_MAX_SIZE = 10000
+const PREP_MAX_INDEX = 2_000_000_000
 
-var prep_index uint64 = 1
-var prep_cache map[uint64]*sql.Stmt
+var prep_index uint32 = 1
+var prep_cache map[uint32]*sql.Stmt
 
 // Open opens the sqlite database
 func Open() (err error) {
 	db, err = sql.Open("sqlite3", "./sqlite.db")
-	prep_cache = make(map[uint64]*sql.Stmt)
+	prep_cache = make(map[uint32]*sql.Stmt)
 	return err
 }
 
@@ -32,8 +33,9 @@ func Open() (err error) {
 func Exec(stmtOrNumber string, args []interface{}) (count int64, lastId int64, err error) {
 	var res sql.Result
 	// select number or string
-	index, err := strconv.ParseUint(stmtOrNumber, 10, 64)
+	index64, err := strconv.ParseUint(stmtOrNumber, 10, 32)
 	if err == nil {
+		index := uint32(index64)
 		stmt := prep_cache[index]
 		if stmt == nil {
 			return -1, -1, errors.New("no such prepared statement index")
@@ -70,8 +72,9 @@ func Query(queryOrNumber string, args []interface{}, asMap bool, count int64) (r
 	var rows *sql.Rows
 
 	// grab cached stmp
-	index, err := strconv.ParseUint(queryOrNumber, 10, 64)
+	index64, err := strconv.ParseUint(queryOrNumber, 10, 64)
 	if err == nil {
+		index := uint32(index64)
 		stmt := prep_cache[index]
 		if stmt == nil {
 			return nil, errors.New("no such prepared statement index")
@@ -143,13 +146,24 @@ func Query(queryOrNumber string, args []interface{}, asMap bool, count int64) (r
 	return out, rows.Err()
 }
 
+// NextIndex generate a new index for a cache avoding conflicts
+// the value should never be 0, must be <MAX and must not be present in the cache
+func NextIndex(index uint32, cache map[uint32]*sql.Stmt, MAX uint32) uint32 {
+	ok := true
+	for index == 0 || ok {
+		index = (index + 1) % MAX
+		_, ok = cache[index]
+	}
+	return index
+}
+
 // Prep accepts prepares a sql statement and stores it in a table
 // returning a number. It also accepts a number, and if it corresponds
 // to the number returned by a previous statement, it closes the prepared statement
 // you can store up to one 10000 statements, if you go over the limit it will return an error
 // using the special statement "clean_prep_cache" you can close all the opened statement
 // returnend 0 means OK, any other number is the index in the cache
-func Prep(queryOrNumber string) (uint64, error) {
+func Prep(queryOrNumber string) (uint32, error) {
 
 	if queryOrNumber == "clean_prep_cache" {
 		for key, value := range prep_cache {
@@ -159,9 +173,10 @@ func Prep(queryOrNumber string) (uint64, error) {
 		return 0, nil
 	}
 
-	index, err := strconv.ParseUint(queryOrNumber, 10, 64)
+	index64, err := strconv.ParseUint(queryOrNumber, 10, 64)
 	if err == nil {
 		// clean all
+		index := uint32(index64)
 		stat, ok := prep_cache[index]
 		if ok {
 			stat.Close()
@@ -176,11 +191,9 @@ func Prep(queryOrNumber string) (uint64, error) {
 	}
 
 	// get next index and close very old statements if still unclosed
-	prep_index = prep_index + 1
-	// handle unlikely case of overflow
-	if prep_index == 0 {
-		prep_index = 1
-	}
+
+	// get next index
+	prep_index = NextIndex(prep_index, prep_cache, PREP_MAX_INDEX)
 	stmt, err := db.Prepare(queryOrNumber)
 	if err != nil {
 		return 0, err
