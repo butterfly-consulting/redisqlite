@@ -15,6 +15,7 @@
 # limitations under the License.
 #
 
+
 redisqlite.so: *.go
 	cd main && go build -v -buildmode=c-shared -o ../redisqlite.so
 	chmod +x redisqlite.so
@@ -50,4 +51,9 @@ test: image
 	docker kill redisqlite
 	if diff test.out test.out.compare ; then echo "PASS"; else echo "FAIL"; fi
 
-
+TAG=$(shell awk 'NR==1 {print $$2}' CHANGELOG.md)
+USER=sciabarracom
+.PHONY: push
+push: image
+	docker tag redisqlite $(USER)/redisqlite:$(TAG)
+	docker push $(USER)/redisqlite:$(TAG)
