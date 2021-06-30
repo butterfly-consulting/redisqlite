@@ -23,7 +23,7 @@ var prep_cache map[uint32]*sql.Stmt
 
 // Open opens the sqlite database
 func Open() (err error) {
-	db, err = sql.Open("sqlite3", "./sqlite.db")
+	db, err = sql.Open("sqlite3", "./db.sqlite")
 	prep_cache = make(map[uint32]*sql.Stmt)
 	return err
 }

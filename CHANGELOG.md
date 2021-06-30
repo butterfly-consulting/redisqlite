@@ -1,3 +1,4 @@
+- v1.0.5 using db.sqlite instead of sqlite.db
 - v1.0.4 avoiding concerns with prep indexes
 - v1.0.3 better handling of index generatin
 - v1.0.2 default build to amd64 instead of arm64
