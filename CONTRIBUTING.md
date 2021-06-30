@@ -1,4 +1,4 @@
-### Contributing to the Nimbella SDKs
+### Contributing to Nimbella Redisqlite
 
 We are thankful that you're taking the time to read this contribution guide, and we are excited to work with you toward a positive contribution to the project. This document outlines the process for contributing to the project.
 
